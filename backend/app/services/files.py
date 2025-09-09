@@ -12,9 +12,9 @@ from ..config import settings
 def get_s3_client():
     return boto3.client(
         "s3",
-        endpoint_url=settings.S3_ENDPOINT,
-        aws_access_key_id=settings.S3_ACCESS_KEY,
-        aws_secret_access_key=settings.S3_SECRET_KEY,
+        endpoint_url=settings.s3_endpoint,
+        aws_access_key_id=settings.s3_access_key,
+        aws_secret_access_key=settings.s3_secret_key,
         config=Config(signature_version="s3v4"),
         region_name="us-east-1",
     )

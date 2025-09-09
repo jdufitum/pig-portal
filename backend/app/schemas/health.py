@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class HealthEventCreate(BaseModel):
@@ -35,6 +35,12 @@ class HealthEventCreate(BaseModel):
             ]
         }
     }
+
+    @model_validator(mode="after")
+    def validate_target(self):
+        if self.pig_id is None and (self.pen is None or self.pen.strip() == ""):
+            raise ValueError("Provide pig_id or pen")
+        return self
 
 
 class HealthEventOut(BaseModel):

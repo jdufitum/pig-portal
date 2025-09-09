@@ -48,6 +48,7 @@ from .api.v1.pigs import router as pigs_router
 from .api.v1.breeding import router as breeding_router, litters_router
 from .api.v1.health_events import router as health_events_router
 from .api.v1.files import router as files_router
+from .api.v1.weights import router as weights_router
 from .api.v1.tasks import router as tasks_router
 from .api.v1.reports import router as reports_router
 from .api.v1.settings import router as settings_router
@@ -57,6 +58,7 @@ app.include_router(breeding_router, prefix="/api/v1")
 app.include_router(litters_router, prefix="/api/v1")
 app.include_router(health_events_router, prefix="/api/v1")
 app.include_router(files_router, prefix="/api/v1")
+app.include_router(weights_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(settings_router, prefix="/api/v1")
