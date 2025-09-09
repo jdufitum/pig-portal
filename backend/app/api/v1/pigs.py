@@ -4,7 +4,7 @@ import uuid
 from datetime import date, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response, UploadFile, File as UploadFileDep
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -206,4 +206,78 @@ def growth_curve(
         query = query.filter(WeightRecord.date <= to_date)
     records = query.order_by(WeightRecord.date.asc()).all()
     return [{"date": r.date.isoformat(), "kg": float(r.weight_kg)} for r in records]
+
+
+@router.delete("/{pig_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_pig(pig_id: uuid.UUID, db: Session = Depends(get_db), _=Depends(require_role(UserRole.OWNER))):
+    pig = db.get(Pig, pig_id)
+    if not pig:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pig not found")
+    db.delete(pig)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{pig_id}/family")
+def pig_family(pig_id: uuid.UUID, db: Session = Depends(get_db), _user=Depends(get_current_user)):
+    pig = db.get(Pig, pig_id)
+    if not pig:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pig not found")
+    sire = db.get(Pig, pig.sire_id) if pig.sire_id else None
+    dam = db.get(Pig, pig.dam_id) if pig.dam_id else None
+    offspring = db.query(Pig).filter((Pig.sire_id == pig_id) | (Pig.dam_id == pig_id)).order_by(Pig.created_at.asc()).all()
+    def serialize(p: Pig | None):
+        if not p:
+            return None
+        return {"id": str(p.id), "ear_tag": p.ear_tag, "sex": p.sex, "class": p.pig_class}
+    return {
+        "parents": [x for x in [serialize(sire), serialize(dam)] if x],
+        "offspring": [serialize(c) for c in offspring],
+    }
+
+
+@router.post("/import")
+def import_pigs(file: UploadFile = UploadFileDep(...), db: Session = Depends(get_db), _=Depends(require_role(UserRole.OWNER))):
+    """Import minimal CSV for pigs. Expected headers include at least ear_tag; optional: sex,class,birth_date,pen."""
+    import csv, io
+    content = file.file.read()
+    try:
+        text = content.decode("utf-8")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid file encoding")
+    reader = csv.DictReader(io.StringIO(text))
+    results: list[dict] = []
+    for idx, row in enumerate(reader, start=1):
+        ear_tag = (row.get("ear_tag") or "").strip()
+        if not ear_tag:
+            results.append({"row": idx, "success": False, "message": "ear_tag required"})
+            continue
+        try:
+            payload = PigCreate(
+                ear_tag=ear_tag,
+                sex=(row.get("sex") or None),
+                pig_class=(row.get("class") or None),
+                birth_date=(row.get("birth_date") or None),
+                current_pen=(row.get("pen") or None),
+            )
+        except Exception as e:
+            results.append({"row": idx, "success": False, "message": str(e)})
+            continue
+        pig = Pig(
+            ear_tag=payload.ear_tag,
+            sex=payload.sex,
+            pig_class=payload.pig_class,
+            birth_date=payload.birth_date,
+            current_pen=payload.current_pen,
+            status="active",
+        )
+        db.add(pig)
+        try:
+            db.commit()
+            db.refresh(pig)
+            results.append({"row": idx, "success": True, "id": str(pig.id)})
+        except IntegrityError:
+            db.rollback()
+            results.append({"row": idx, "success": False, "message": "Duplicate ear_tag"})
+    return {"results": results}
 

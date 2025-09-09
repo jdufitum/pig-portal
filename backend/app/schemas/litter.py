@@ -13,6 +13,7 @@ class LitterCreate(BaseModel):
     stillborn: Optional[int] = Field(None, ge=0)
     neonatal_deaths: Optional[int] = Field(0, ge=0)
     wean_date: Optional[date] = None
+    weaned: Optional[int] = Field(None, ge=0)
 
     model_config = {
         "json_schema_extra": {
@@ -38,6 +39,7 @@ class LitterCreate(BaseModel):
 
 class LitterUpdate(BaseModel):
     wean_date: Optional[date] = None
+    weaned: Optional[int] = Field(None, ge=0)
 
 
 class LitterOut(BaseModel):
@@ -49,6 +51,7 @@ class LitterOut(BaseModel):
     stillborn: Optional[int] = None
     neonatal_deaths: int
     wean_date: Optional[date] = None
+    weaned: Optional[int] = None
 
     class Config:
         from_attributes = True

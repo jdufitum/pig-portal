@@ -1,6 +1,6 @@
 ENV_FILE?=.env
 
-.PHONY: up down logs ps build backup restore
+.PHONY: up down logs ps build backup restore test-backend test-frontend test-all
 
 up:
 	docker compose --env-file $(ENV_FILE) -f infrastructure/docker-compose.yml up -d --build
@@ -23,3 +23,11 @@ backup:
 
 restore:
 	gunzip -c $(FILE) | docker compose --env-file $(ENV_FILE) -f infrastructure/docker-compose.yml exec -T db psql -U postgres -d pigs
+
+test-backend:
+	docker compose --env-file $(ENV_FILE) -f infrastructure/docker-compose.yml exec -T backend pytest -q
+
+test-frontend:
+	cd frontend && npm ci && npx playwright install --with-deps chromium && npm run test:e2e
+
+test-all: test-backend test-frontend
