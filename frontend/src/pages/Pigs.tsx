@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api } from '../api/client'
+import { api, hasAnyRole } from '../api/client'
 import { Link } from 'react-router-dom'
 import { Table, Th, Td } from '../components/Table'
 
@@ -50,6 +50,8 @@ export default function Pigs(){
     fetchData(offset)
   }
 
+  const canCreate = hasAnyRole('owner')
+
   return <div className="space-y-4">
     <h2 className="text-xl font-semibold">Pigs</h2>
     <div className="flex flex-wrap gap-2 items-end">
@@ -79,7 +81,9 @@ export default function Pigs(){
         <input className="border rounded px-2 py-1" value={pen} onChange={e=>setPen(e.target.value)} />
       </div>
       <button onClick={()=>fetchData(0)} className="bg-blue-600 text-white px-3 py-1 rounded">Filter</button>
-      <button onClick={()=>setShowCreate(true)} className="border px-3 py-1 rounded">Create</button>
+      {canCreate && (
+        <button onClick={()=>setShowCreate(true)} className="border px-3 py-1 rounded">Create</button>
+      )}
       <button onClick={exportCsv} className="border px-3 py-1 rounded">Export CSV</button>
     </div>
     <div className="overflow-auto">
@@ -109,7 +113,7 @@ export default function Pigs(){
     </div>
     {loading && <div>Loading...</div>}
 
-    {showCreate && (
+    {showCreate && canCreate && (
       <div className="fixed inset-0 bg-black/40 grid place-items-center">
         <div className="bg-white rounded shadow w-[420px] p-4 space-y-3">
           <div className="text-lg font-semibold">Create Pig</div>

@@ -11,6 +11,8 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 import RootLayout from './ui/RootLayout'
 import DevUI from './pages/DevUI'
+import Litters from './pages/Litters'
+import Imports from './pages/Imports'
 
 function Protected({ children }: { children: ReactNode }) {
   const token = useAuthStore((s: any) => s.accessToken)
@@ -28,6 +30,8 @@ export const router = createBrowserRouter([
       { path: 'pigs/:id', element: <PigDetail /> },
       { path: 'breeding', element: <Breeding /> },
       { path: 'tasks', element: <Tasks /> },
+      { path: 'litters', element: <Litters /> },
+      { path: 'imports', element: <Imports /> },
       { path: 'reports', element: <Reports /> },
       { path: 'settings', element: <Settings /> },
     ]
