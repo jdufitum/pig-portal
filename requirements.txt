@@ -1,0 +1,6 @@
+fastapi
+sqlmodel
+uvicorn
+SQLAlchemy
+pydantic
+python-multipart
