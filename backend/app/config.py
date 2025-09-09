@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
 
+    # Object storage (S3-compatible)
+    s3_endpoint: str | None = None
+    s3_bucket: str | None = None
+    s3_access_key: str | None = None
+    s3_secret_key: str | None = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

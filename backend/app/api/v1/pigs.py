@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ...deps import get_db, get_current_user
+from ...config import settings
 from ...models import Pig, WeightRecord
 from ...roles import require_role
 from ...models.user import UserRole
@@ -154,7 +155,11 @@ def add_weight(pig_id: uuid.UUID, payload: WeightCreate, db: Session = Depends(g
     pig = db.get(Pig, pig_id)
     if not pig:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pig not found")
-
+    # Prevent future-dated weights beyond a small grace
+    today = date.today()
+    grace_days = 2
+    if payload.date > today + timedelta(days=grace_days):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="date cannot be in the future")
     record = WeightRecord(pig_id=pig_id, date=payload.date, weight_kg=payload.weight_kg, notes=payload.notes)
     db.add(record)
     db.commit()
