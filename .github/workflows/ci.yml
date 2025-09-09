@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:24-dind
+        options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Create .env
+        run: |
+          echo SECRET_KEY=test >> .env
+          echo POSTGRES_PASSWORD=postgres >> .env
+          echo OWNER_EMAIL=owner@farm.test >> .env
+          echo OWNER_PASSWORD=Passw0rd! >> .env
+      - name: Docker compose up
+        run: |
+          docker compose --env-file .env -f infrastructure/docker-compose.yml up -d --build
+      - name: Wait for backend
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost/api/healthz > /dev/null; then echo OK; exit 0; fi; sleep 2; done; exit 1
+      - name: Backend tests
+        run: |
+          docker compose --env-file .env -f infrastructure/docker-compose.yml exec -T backend pytest -q
+      - name: Frontend E2E tests
+        run: |
+          cd frontend
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:e2e

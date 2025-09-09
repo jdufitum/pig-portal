@@ -85,6 +85,20 @@ def upcoming_farrowings(
     return arr
 
 
+@router.patch("/{event_id}", response_model=BreedingOut)
+def update_service(event_id: uuid.UUID, payload: BreedingUpdate, db: Session = Depends(get_db), _=Depends(require_role(UserRole.OWNER, UserRole.WORKER))):
+    event = db.get(BreedingEvent, event_id)
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Breeding event not found")
+    data = payload.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(event, k, v)
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
+
+
 litters_router = APIRouter(prefix="/litters", tags=["litters"])
 
 
@@ -115,6 +129,8 @@ def update_litter(litter_id: uuid.UUID, payload: LitterUpdate, db: Session = Dep
     data = payload.model_dump(exclude_unset=True)
     if "wean_date" in data and litter.farrow_date and data["wean_date"] and data["wean_date"] < litter.farrow_date:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="wean_date must be on or after farrow_date")
+    if "weaned" in data and data["weaned"] is not None and litter.liveborn is not None and data["weaned"] > litter.liveborn:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="weaned must be <= liveborn")
     for k, v in data.items():
         setattr(litter, k, v)
     db.add(litter)

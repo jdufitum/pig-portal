@@ -14,7 +14,7 @@ class PigBase(BaseModel):
     pig_class: Optional[str] = Field(None, alias="class", pattern="^(piglet|grower|finisher|sow|boar)$")
     source: Optional[str] = None
     status: Optional[str] = Field("active", pattern="^(active|sold|dead)$")
-    current_pen: Optional[str] = None
+    current_pen: Optional[str] = Field(None, alias="pen")
     sire_id: Optional[uuid.UUID] = None
     dam_id: Optional[uuid.UUID] = None
 
@@ -63,7 +63,7 @@ class PigUpdate(BaseModel):
     pig_class: Optional[str] = Field(None, alias="class", pattern="^(piglet|grower|finisher|sow|boar)$")
     source: Optional[str] = None
     status: Optional[str] = Field(None, pattern="^(active|sold|dead)$")
-    current_pen: Optional[str] = None
+    current_pen: Optional[str] = Field(None, alias="pen")
     sire_id: Optional[uuid.UUID] = None
     dam_id: Optional[uuid.UUID] = None
 

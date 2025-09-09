@@ -19,6 +19,7 @@ class Litter(Base):
     stillborn: Mapped[int | None] = mapped_column(Integer, nullable=True)
     neonatal_deaths: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     wean_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    weaned: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (
         CheckConstraint("liveborn >= 0", name="ck_litters_liveborn_nonneg"),

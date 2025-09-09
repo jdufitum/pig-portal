@@ -1,3 +1,37 @@
+from datetime import datetime, timedelta
+from jose import jwt
+from .config import settings
+
+
+def hash_password(password: str) -> str:
+    # Simple placeholder hashing for tests; in production use passlib bcrypt
+    import hashlib
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    return hash_password(password) == password_hash
+
+
+def _encode_jwt(subject: str, expires_delta: timedelta, extra: dict | None = None) -> str:
+    now = datetime.utcnow()
+    payload = {
+        "sub": subject,
+        "iat": int(now.timestamp()),
+        "exp": int((now + expires_delta).timestamp()),
+    }
+    if extra:
+        payload.update(extra)
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def create_access_token(subject: str, extra_claims: dict | None = None) -> str:
+    return _encode_jwt(subject, timedelta(minutes=settings.access_token_expires_minutes), extra_claims)
+
+
+def create_refresh_token(subject: str) -> str:
+    return _encode_jwt(subject, timedelta(days=settings.refresh_token_expires_days), {"type": "refresh"})
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
