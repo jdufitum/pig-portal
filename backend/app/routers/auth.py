@@ -13,7 +13,7 @@ from ..security import hash_password, verify_password, create_access_token, crea
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def get_db():
@@ -30,10 +30,11 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
+    role_value = payload.role if payload.role in {UserRole.OWNER, UserRole.WORKER, UserRole.VET} else UserRole.WORKER
     user = User(
         email=payload.email.lower(),
-        full_name=payload.full_name,
-        role=payload.role if payload.role in {UserRole.OWNER, UserRole.WORKER, UserRole.VET} else UserRole.WORKER,
+        name=payload.name,
+        role=role_value,
         password_hash=hash_password(payload.password),
     )
     db.add(user)
@@ -48,7 +49,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email or password")
 
-    access = create_access_token(user.email, extra_claims={"role": user.role, "uid": user.id})
+    access = create_access_token(user.email, extra_claims={"role": user.role, "uid": str(user.id)})
     refresh = create_refresh_token(user.email)
     return TokenPair(access_token=access, refresh_token=refresh)
 
@@ -67,7 +68,7 @@ def refresh_token(token: str, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    access = create_access_token(user.email, extra_claims={"role": user.role, "uid": user.id})
+    access = create_access_token(user.email, extra_claims={"role": user.role, "uid": str(user.id)})
     refresh = create_refresh_token(user.email)
     return TokenPair(access_token=access, refresh_token=refresh)
 

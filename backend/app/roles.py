@@ -13,3 +13,7 @@ def require_roles(allowed_roles: Iterable[str]):
         return user
 
     return _guard
+
+
+def require_role(*roles: str):
+    return require_roles(roles)
