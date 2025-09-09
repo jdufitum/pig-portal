@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { api } from '../api/client'
+import { api, hasAnyRole } from '../api/client'
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 export default function PigDetail(){
@@ -14,6 +14,9 @@ export default function PigDetail(){
   const [weightKg, setWeightKg] = useState('')
   const [healthList, setHealthList] = useState<any[]>([])
   const [files, setFiles] = useState<any[]>([])
+  const canEditPig = hasAnyRole('owner')
+  const canAddWeight = hasAnyRole('owner','worker')
+  const canUploadFile = hasAnyRole('owner','worker','vet')
 
   async function loadPig(){
     const { data } = await api.get(`/pigs/${id}`)
@@ -66,7 +69,9 @@ export default function PigDetail(){
         <div className="p-4 border rounded space-y-2">
           <div className="flex justify-between items-center">
             <div className="text-lg font-semibold">{pig.ear_tag}</div>
-            <button className="border rounded px-2 py-1" onClick={()=>setEdit(!edit)}>{edit? 'Cancel':'Edit'}</button>
+            {canEditPig && (
+              <button className="border rounded px-2 py-1" onClick={()=>setEdit(!edit)}>{edit? 'Cancel':'Edit'}</button>
+            )}
           </div>
           {!edit ? (
             <>
@@ -74,7 +79,7 @@ export default function PigDetail(){
               <div><span className="text-gray-600 text-sm">Status:</span> {pig.status}</div>
               <div><span className="text-gray-600 text-sm">Pen:</span> {pig.current_pen}</div>
             </>
-          ) : (
+          ) : canEditPig ? (
             <div className="space-y-2">
               <div>
                 <label className="block text-xs text-gray-600">Sex</label>
@@ -90,7 +95,7 @@ export default function PigDetail(){
               </div>
               <button className="bg-blue-600 text-white px-3 py-1 rounded" onClick={async()=>{ await api.patch(`/pigs/${id}`, { sex: form.sex || undefined, current_pen: form.current_pen || undefined }); setEdit(false); await loadPig() }}>Save</button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     )}
@@ -99,11 +104,15 @@ export default function PigDetail(){
       <div className="grid grid-cols-2 gap-4">
         <div className="p-4 border rounded">
           <h3 className="font-semibold mb-2">Add Weight</h3>
-          <div className="space-y-2">
-            <input className="border rounded px-2 py-1 w-full" type="date" value={weightDate} onChange={e=>setWeightDate(e.target.value)} />
-            <input className="border rounded px-2 py-1 w-full" type="number" step="0.01" placeholder="kg" value={weightKg} onChange={e=>setWeightKg(e.target.value)} />
-            <button onClick={addWeight} className="bg-blue-600 text-white px-3 py-1 rounded">Add</button>
-          </div>
+          {canAddWeight ? (
+            <div className="space-y-2">
+              <input className="border rounded px-2 py-1 w-full" type="date" value={weightDate} onChange={e=>setWeightDate(e.target.value)} />
+              <input className="border rounded px-2 py-1 w-full" type="number" step="0.01" placeholder="kg" value={weightKg} onChange={e=>setWeightKg(e.target.value)} />
+              <button onClick={addWeight} className="bg-blue-600 text-white px-3 py-1 rounded">Add</button>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">You do not have permission to add weights.</div>
+          )}
         </div>
         <div className="p-4 border rounded">
           <h3 className="font-semibold mb-2">Growth Curve</h3>
@@ -140,7 +149,11 @@ export default function PigDetail(){
 
     {tab==='files' && (
       <div className="p-4 border rounded space-y-3">
-        <input type="file" accept="image/*" onChange={uploadFile} />
+        {canUploadFile ? (
+          <input type="file" accept="image/*" onChange={uploadFile} />
+        ) : (
+          <div className="text-sm text-gray-500">You do not have permission to upload files.</div>
+        )}
         <div className="grid grid-cols-4 gap-2">
           {files.map(f => (<a className="block" key={f.id} href={f.url} target="_blank"><img src={f.url} className="w-full h-32 object-cover rounded" /></a>))}
         </div>
