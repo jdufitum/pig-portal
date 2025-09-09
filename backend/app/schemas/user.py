@@ -1,21 +1,22 @@
+import uuid
 from pydantic import BaseModel, EmailStr, constr
 
 
 class UserBase(BaseModel):
     email: EmailStr
-    full_name: str
+    name: str | None = None
     role: str
 
 
 class UserCreate(BaseModel):
     email: EmailStr
-    full_name: str
+    name: str | None = None
     role: str
     password: constr(min_length=8)
 
 
 class UserOut(UserBase):
-    id: int
+    id: uuid.UUID
 
     class Config:
         from_attributes = True
