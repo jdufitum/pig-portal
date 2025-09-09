@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { useAuthStore } from './api/client'
 import type { ReactNode } from 'react'
+import { useAuthStore } from './api/client'
 import Dashboard from './pages/Dashboard'
 import Pigs from './pages/Pigs'
 import PigDetail from './pages/PigDetail'
@@ -10,6 +10,7 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import RootLayout from './ui/RootLayout'
+import DevUI from './pages/DevUI'
 
 function Protected({ children }: { children: ReactNode }) {
   const token = useAuthStore((s: any) => s.accessToken)
@@ -19,6 +20,7 @@ function Protected({ children }: { children: ReactNode }) {
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
+  { path: '/dev/ui', element: <DevUI /> },
   {
     path: '/', element: <Protected><RootLayout /></Protected>, children: [
       { index: true, element: <Dashboard /> },
