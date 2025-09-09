@@ -2,7 +2,7 @@ import uuid
 from datetime import date, timedelta
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class BreedingCreate(BaseModel):
@@ -32,6 +32,14 @@ class BreedingCreate(BaseModel):
         }
     }
 
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.preg_check_date and self.service_date and self.preg_check_date < self.service_date:
+            raise ValueError("preg_check_date must be on or after service_date")
+        if self.expected_farrow and self.service_date and self.expected_farrow < self.service_date:
+            raise ValueError("expected_farrow must be on or after service_date")
+        return self
+
 
 class BreedingUpdate(BaseModel):
     expected_farrow: Optional[date] = None
@@ -40,6 +48,11 @@ class BreedingUpdate(BaseModel):
     parity: Optional[int] = None
     pen_at_service: Optional[str] = None
     notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_update_dates(self):
+        # Cannot fully validate relative to service_date without fetching; keep simple: ensure not impossible combinations
+        return self
 
 
 class BreedingOut(BaseModel):

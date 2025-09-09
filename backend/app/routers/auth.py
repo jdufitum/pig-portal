@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..db import SessionLocal
 from ..models.user import User, UserRole
-from ..schemas.user import UserCreate, UserOut, TokenPair
+from ..schemas.user import UserCreate, UserOut, TokenPair, RefreshRequest
 from ..security import hash_password, verify_password, create_access_token, create_refresh_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -55,12 +55,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.post("/refresh", response_model=TokenPair)
-def refresh_token(token: str, db: Session = Depends(get_db)):
+def refresh_token(payload: RefreshRequest, db: Session = Depends(get_db)):
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
-        if payload.get("type") != "refresh":
+        decoded = jwt.decode(payload.token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+        if decoded.get("type") != "refresh":
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid refresh token")
-        subject = payload.get("sub")
+        subject = decoded.get("sub")
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 

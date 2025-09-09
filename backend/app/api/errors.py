@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import Request
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
@@ -26,4 +27,10 @@ def register_error_handlers(app):
     @app.exception_handler(IntegrityError)
     async def handle_integrity_error(request: Request, exc: IntegrityError):
         return JSONResponse(status_code=409, content=error_payload("integrity_error", "Integrity constraint violated"))
+
+    @app.exception_handler(HTTPException)
+    async def handle_http_exception(request: Request, exc: HTTPException):
+        # Preserve original status code, wrap message in consistent envelope
+        message = exc.detail if isinstance(exc.detail, str) else "Request failed"
+        return JSONResponse(status_code=exc.status_code, content=error_payload("http_error", message))
 

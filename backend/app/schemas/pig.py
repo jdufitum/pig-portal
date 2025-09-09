@@ -2,7 +2,8 @@ import uuid
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from datetime import date as _date
 
 
 class PigBase(BaseModel):
@@ -19,6 +20,21 @@ class PigBase(BaseModel):
 
     class Config:
         populate_by_name = True
+
+    @field_validator("ear_tag")
+    @classmethod
+    def normalize_ear_tag(cls, v: str) -> str:
+        vv = v.strip()
+        if not vv:
+            raise ValueError("ear_tag must not be empty")
+        return vv
+
+    @field_validator("birth_date")
+    @classmethod
+    def check_birth_not_future(cls, v: _date | None) -> _date | None:
+        if v and v > _date.today():
+            raise ValueError("birth_date cannot be in the future")
+        return v
 
 
 class PigCreate(PigBase):
