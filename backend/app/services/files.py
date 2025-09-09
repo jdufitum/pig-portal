@@ -6,7 +6,7 @@ from datetime import timedelta
 import boto3
 from botocore.client import Config
 
-from ..core.config import settings
+from ..config import settings
 
 
 def get_s3_client():

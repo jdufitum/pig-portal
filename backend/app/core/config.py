@@ -2,12 +2,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 from typing import List
 
+# Deprecated in favor of app.config.Settings. Keep a thin shim for backward compatibility
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', env_prefix='', extra='ignore')
 
-    DATABASE_URL: str = 'postgresql+asyncpg://postgres:postgres@localhost:5432/postgres'
-    JWT_SECRET: str = 'change-me'
-    JWT_EXPIRE_MINUTES: int = 60 * 24
+    DATABASE_URL: str = ''
+    JWT_SECRET: str = ''
+    JWT_EXPIRE_MINUTES: int = 0
     S3_ENDPOINT: str | None = None
     S3_BUCKET: str | None = None
     S3_ACCESS_KEY: str | None = None
@@ -21,4 +22,9 @@ class Settings(BaseSettings):
             return [o.strip() for o in v.split(',') if o.strip()]
         return v
 
-settings = Settings()
+# Expose values from the unified settings if available
+try:
+    from app.config import settings as unified
+    settings = unified
+except Exception:  # pragma: no cover
+    settings = Settings()

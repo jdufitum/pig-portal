@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from .core.config import settings
+from .config import settings
 from .core.logging import configure_logging
 from .api.errors import register_error_handlers
 import os
@@ -32,7 +32,7 @@ register_error_handlers(app)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,6 +50,7 @@ from .api.v1.health_events import router as health_events_router
 from .api.v1.files import router as files_router
 from .api.v1.tasks import router as tasks_router
 from .api.v1.reports import router as reports_router
+from .api.v1.settings import router as settings_router
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(pigs_router, prefix="/api/v1")
 app.include_router(breeding_router, prefix="/api/v1")
@@ -58,6 +59,7 @@ app.include_router(health_events_router, prefix="/api/v1")
 app.include_router(files_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
+app.include_router(settings_router, prefix="/api/v1")
 
 # Auth routes
 app.include_router(auth_router, prefix="/api/v1")
