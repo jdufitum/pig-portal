@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .core.logging import configure_logging
+from .api.errors import register_error_handlers
 import os
 
 from .deps import get_current_user
@@ -10,10 +11,23 @@ from .db import SessionLocal
 from .models.user import User, UserRole
 from .security import hash_password
 
-app = FastAPI(title="Pig Farm API", openapi_url="/api/openapi.json", docs_url="/api/docs")
+tags_metadata = [
+    {"name": "auth", "description": "Authentication and token management"},
+    {"name": "Health", "description": "API health checks"},
+    {"name": "pigs", "description": "Pig records, weights, and growth curves"},
+    {"name": "breeding", "description": "Services and upcoming farrowings"},
+    {"name": "litters", "description": "Farrowing and weaning records"},
+    {"name": "health", "description": "Treatments and illness records"},
+    {"name": "files", "description": "File uploads and media"},
+    {"name": "tasks", "description": "Tasks and dashboard summaries"},
+    {"name": "reports", "description": "Production KPIs and reports"},
+]
+
+app = FastAPI(title="Pig Farm API", openapi_url="/api/openapi.json", docs_url="/api/docs", openapi_tags=tags_metadata)
 
 # Configure logging
 configure_logging()
+register_error_handlers(app)
 
 # CORS
 app.add_middleware(
@@ -30,7 +44,20 @@ async def healthz():
 
 # Mount API routers placeholder
 from .api.v1.health import router as health_router
+from .api.v1.pigs import router as pigs_router
+from .api.v1.breeding import router as breeding_router, litters_router
+from .api.v1.health_events import router as health_events_router
+from .api.v1.files import router as files_router
+from .api.v1.tasks import router as tasks_router
+from .api.v1.reports import router as reports_router
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(pigs_router, prefix="/api/v1")
+app.include_router(breeding_router, prefix="/api/v1")
+app.include_router(litters_router, prefix="/api/v1")
+app.include_router(health_events_router, prefix="/api/v1")
+app.include_router(files_router, prefix="/api/v1")
+app.include_router(tasks_router, prefix="/api/v1")
+app.include_router(reports_router, prefix="/api/v1")
 
 # Auth routes
 app.include_router(auth_router, prefix="/api/v1")
@@ -53,12 +80,7 @@ def bootstrap_owner() -> None:
         existing = db.query(User).filter(User.email == owner_email.lower()).first()
         if existing:
             return
-        user = User(
-            email=owner_email.lower(),
-            full_name="Owner",
-            role=UserRole.OWNER,
-            password_hash=hash_password(owner_password),
-        )
+        user = User(email=owner_email.lower(), name="Owner", role=UserRole.OWNER, password_hash=hash_password(owner_password))
         db.add(user)
         db.commit()
     finally:
