@@ -17,7 +17,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   clear: () => set({ accessToken: null, refreshToken: null }),
 }));
 
-export const api = axios.create({ baseURL: API_BASE });
+export const api = axios.create({ baseURL: API_BASE + "/v1" });
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;

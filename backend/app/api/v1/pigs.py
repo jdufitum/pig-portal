@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -52,12 +52,14 @@ def list_pigs(
     status_filter: Optional[str] = Query(None, alias="status", pattern="^(active|sold|dead)$"),
     sex: Optional[str] = Query(None, pattern="^(M|F)$"),
     pen: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    response: Response = None,
 ):
-    query = db.query(Pig)
+    base = db.query(Pig)
     conditions = []
     if search:
-        like = f"%{search}%"
-        conditions.append(Pig.ear_tag.ilike(like))
+        conditions.append(Pig.ear_tag.ilike(f"%{search}%"))
     if status_filter:
         conditions.append(Pig.status == status_filter)
     if sex:
@@ -65,9 +67,53 @@ def list_pigs(
     if pen:
         conditions.append(Pig.current_pen == pen)
     if conditions:
-        query = query.filter(and_(*conditions))
-    query = query.order_by(Pig.created_at.desc())
-    return query.all()
+        base = base.filter(and_(*conditions))
+    total = base.count()
+    if response is not None:
+        response.headers["X-Total-Count"] = str(total)
+    rows = base.order_by(Pig.created_at.desc()).limit(limit).offset(offset).all()
+    return rows
+
+
+@router.get("/export")
+def export_pigs(
+    db: Session = Depends(get_db),
+    _user=Depends(get_current_user),
+    search: Optional[str] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    sex: Optional[str] = None,
+    pen: Optional[str] = None,
+):
+    query = db.query(Pig)
+    if search:
+        query = query.filter(Pig.ear_tag.ilike(f"%{search}%"))
+    if status_filter:
+        query = query.filter(Pig.status == status_filter)
+    if sex:
+        query = query.filter(Pig.sex == sex)
+    if pen:
+        query = query.filter(Pig.current_pen == pen)
+    rows = query.order_by(Pig.ear_tag.asc()).all()
+    headers = ["id","ear_tag","sex","breed","birth_date","class","source","status","current_pen","sire_id","dam_id"]
+    def cell(v):
+        if v is None:
+            return ""
+        return str(v)
+    csv_lines = [",".join(headers)]
+    for r in rows:
+        rec = [
+            str(r.id), r.ear_tag or "", r.sex or "", r.breed or "",
+            r.birth_date.isoformat() if r.birth_date else "",
+            r.pig_class or "",
+            r.source or "",
+            r.status or "",
+            r.current_pen or "",
+            str(r.sire_id) if r.sire_id else "",
+            str(r.dam_id) if r.dam_id else "",
+        ]
+        csv_lines.append(",".join([cell(x) for x in rec]))
+    content = "\n".join(csv_lines)
+    return Response(content=content, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=pigs.csv"})
 
 
 @router.get("/{pig_id}", response_model=PigOut)

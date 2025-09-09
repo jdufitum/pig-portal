@@ -43,3 +43,9 @@ def upload_pig_photo(pig_id: uuid.UUID, image: UploadFile = UploadFileDep(...), 
 
     return {"file": {"id": str(record.id), "url": record.url, "kind": record.kind}, "upload_url": signed_url}
 
+
+@router.get("/pigs/{pig_id}")
+def list_pig_files(pig_id: uuid.UUID, db: Session = Depends(get_db), _=Depends(require_role(UserRole.WORKER, UserRole.VET, UserRole.OWNER))):
+    files = db.query(File).filter(File.pig_id == pig_id).order_by(File.created_at.desc()).all()
+    return [{"id": str(f.id), "url": f.url, "kind": f.kind, "created_at": f.created_at.isoformat()} for f in files]
+

@@ -46,6 +46,7 @@ def list_services(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
     preg_status: Optional[str] = Query(None, pattern="^(pos|neg|unknown)$"),
+    sow_id: Optional[uuid.UUID] = None,
 ):
     q = db.query(BreedingEvent)
     if from_date:
@@ -54,6 +55,8 @@ def list_services(
         q = q.filter(BreedingEvent.service_date <= to_date)
     if preg_status:
         q = q.filter(BreedingEvent.preg_status == preg_status)
+    if sow_id:
+        q = q.filter(BreedingEvent.sow_id == sow_id)
     return q.order_by(BreedingEvent.service_date.desc()).all()
 
 
