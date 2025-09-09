@@ -1,0 +1,17 @@
+# Example Caddyfile for HTTPS
+
+# Replace with your domain
+your.domain.com {
+  encode gzip
+
+  @api path /api/*
+  handle @api {
+    reverse_proxy backend:8000
+  }
+
+  handle {
+    root * /usr/share/nginx/html
+    try_files {path} /index.html
+    file_server
+  }
+}
