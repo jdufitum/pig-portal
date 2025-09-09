@@ -83,26 +83,33 @@ make down
 
 ### Environment Variables (.env)
 
-Create a file named `.env` at the repository root. These are consumed by `infrastructure/docker-compose.yml` and the `Makefile`:
+Create a file named `.env` at the repository root (copy from `.env.example`). These are consumed by `infrastructure/docker-compose.yml` and the `Makefile`:
 
 ```env
 # Required
 POSTGRES_PASSWORD=changeme
-JWT_SECRET=please-change-me
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost
+SECRET_KEY=please-change-me
+CORS_ORIGINS=http://localhost:5173,http://localhost
 
 # Optional (for S3-compatible object storage integrations)
-S3_ENDPOINT=
-S3_ACCESS_KEY=
-S3_SECRET_KEY=
-S3_BUCKET=
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_BUCKET=pigfiles
 
 # Optional: container timezone
 TZ=UTC
+
+# Backups schedule and retention (used by backup service)
+BACKUP_SCHEDULE=@daily
+BACKUP_KEEP_DAYS=7
+BACKUP_KEEP_WEEKS=4
+BACKUP_KEEP_MONTHS=3
 ```
 
 Notes:
 - The backend will use Postgres via `DATABASE_URL` injected by Docker Compose.
+- The backend loads `SECRET_KEY` (or `JWT_SECRET`) and `CORS_ORIGINS` (or `ALLOWED_ORIGINS`).
 - For local development without Docker, the backend defaults to SQLite at `sqlite:///./pigs.db`.
 - If you run the frontend dev server, set `VITE_API_BASE_URL=http://localhost:8000` so API calls go to the FastAPI server.
 

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
+from prometheus_fastapi_instrumentator import Instrumentator
 from .core.logging import configure_logging
 from .api.errors import register_error_handlers
 import os
@@ -37,6 +38,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Prometheus metrics
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 @app.get('/api/healthz')
 async def healthz():

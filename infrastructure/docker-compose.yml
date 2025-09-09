@@ -4,7 +4,7 @@ services:
     image: postgres:16
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set}
       POSTGRES_DB: pigs
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -46,8 +46,8 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/pigs
-      SECRET_KEY: ${SECRET_KEY:-dev-secret}
+      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set}@db:5432/pigs
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY not set}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
@@ -77,6 +77,25 @@ services:
       - backend
     restart: unless-stopped
 
+  backup:
+    image: prodrigestivill/postgres-backup-local:16
+    depends_on:
+      - db
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: pigs
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SCHEDULE: ${BACKUP_SCHEDULE:-@daily}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      BACKUP_KEEP_WEEKS: ${BACKUP_KEEP_WEEKS:-4}
+      BACKUP_KEEP_MONTHS: ${BACKUP_KEEP_MONTHS:-3}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - db_backups:/backups
+    restart: unless-stopped
+
 volumes:
   db_data:
   minio_data:
+  db_backups:
