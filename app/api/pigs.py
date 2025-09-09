@@ -1,12 +1,14 @@
 from __future__ import annotations
 from typing import List, Optional
-from datetime import date
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlmodel import select
 from sqlmodel import Session, SQLModel
 import io
 import csv
+import os
+from segno import helpers as qrcode_helpers
 
 from app.db.session import get_session
 from app.models.pig import Pig, Pen, WeightRecord, Movement, Litter, Sex, PigStatus
@@ -27,20 +29,36 @@ class BulkPigletRequest(Litter, table=False):  # pydantic model for request
     piglet_count: int
     sex: Sex
     breed: Optional[str] = None
+    # allow providing service/expected farrow dates
+    service_date: Optional[date] = None
+    expected_farrow_date: Optional[date] = None
 
 @router.post("/bulk_piglets", response_model=List[Pig])
 def bulk_register_piglets(req: BulkPigletRequest, session: Session = Depends(get_session)) -> List[Pig]:
     # ensure litter exists or create
     litter = session.exec(select(Litter).where(Litter.code == req.code)).first()
     if litter is None:
-        litter = Litter(code=req.code, farrowing_date=req.farrowing_date, sow_id=req.sow_id, boar_id=req.boar_id)
+        expected = req.expected_farrow_date
+        if expected is None and req.service_date:
+            expected = req.service_date + timedelta(days=114)
+        litter = Litter(
+            code=req.code,
+            farrowing_date=req.farrowing_date,
+            sow_id=req.sow_id,
+            boar_id=req.boar_id,
+            service_date=req.service_date,
+            expected_farrow_date=expected,
+        )
         session.add(litter)
         session.flush()
+    # Guardrail: wean_date constraint if provided
+    if litter.wean_date and litter.farrowing_date and litter.wean_date < litter.farrowing_date:
+        raise HTTPException(status_code=400, detail="wean_date must be >= farrowing_date")
     created: List[Pig] = []
     for i in range(req.piglet_count):
         ear_tag = f"{req.code}-{i+1}"
         if session.exec(select(Pig).where(Pig.ear_tag == ear_tag)).first():
-            raise HTTPException(status_code=400, detail=f"Ear tag already exists: {ear_tag}")
+            raise HTTPException(status_code=400, detail=f"row={i+1}, field=ear_tag, message=duplicate tag: {ear_tag}")
         pig = Pig(
             ear_tag=ear_tag,
             sex=req.sex,
@@ -89,6 +107,10 @@ def add_weight(record: WeightIn, session: Session = Depends(get_session)) -> Wei
     pig = session.get(Pig, record.pig_id)
     if pig is None:
         raise HTTPException(status_code=404, detail="Pig not found")
+    grace_days = int(os.getenv("WEIGHT_GRACE_DAYS", "2"))
+    today = date.today()
+    if record.recorded_on > today + timedelta(days=grace_days):
+        raise HTTPException(status_code=400, detail=f"recorded_on cannot be in the future beyond {grace_days} days")
     wr = WeightRecord(pig_id=record.pig_id, recorded_on=record.recorded_on, weight_kg=record.weight_kg)
     session.add(wr)
     session.commit()
@@ -266,10 +288,12 @@ class BulkWeightIn(SQLModel, table=False):
 @router.post("/bulk_weights", response_model=List[WeightRecord])
 def bulk_weights(req: BulkWeightIn, session: Session = Depends(get_session)) -> List[WeightRecord]:
     inserted: List[WeightRecord] = []
-    for r in req.records:
+    for idx, r in enumerate(req.records, start=1):
         pig = session.get(Pig, r.pig_id)
         if pig is None:
-            continue
+            raise HTTPException(status_code=400, detail=f"row={idx}, field=pig_id, message=Pig not found: {r.pig_id}")
+        if r.recorded_on > date.today() + timedelta(days=int(os.getenv("WEIGHT_GRACE_DAYS", "2"))):
+            raise HTTPException(status_code=400, detail=f"row={idx}, field=recorded_on, message=Future date beyond grace")
         wr = WeightRecord(pig_id=r.pig_id, recorded_on=r.recorded_on, weight_kg=r.weight_kg)
         session.add(wr)
         inserted.append(wr)
@@ -303,3 +327,17 @@ def family_tree(pig_id: int, session: Session = Depends(get_session)):
         "siblings": siblings,
         "offspring": offspring,
     }
+
+# -------- QR Code --------
+@router.get("/{pig_id}/qr")
+def pig_qr(pig_id: int, session: Session = Depends(get_session)):
+    pig = session.get(Pig, pig_id)
+    if not pig:
+        raise HTTPException(status_code=404, detail="Pig not found")
+    base_url = os.getenv("PUBLIC_BASE_URL", "http://localhost")
+    target = f"{base_url}/pigs/{pig_id}"
+    qr = qrcode_helpers.make_mecard(name=pig.ear_tag, url=target)
+    out = io.BytesIO()
+    qr.save(out, kind="png", scale=5)
+    out.seek(0)
+    return StreamingResponse(out, media_type="image/png")

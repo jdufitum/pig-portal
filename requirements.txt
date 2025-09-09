@@ -4,3 +4,5 @@ uvicorn
 SQLAlchemy
 pydantic
 python-multipart
+psycopg[binary]
+segno

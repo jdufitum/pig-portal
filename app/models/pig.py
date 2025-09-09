@@ -24,8 +24,11 @@ class Litter(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     code: str = Field(index=True, unique=True)
     farrowing_date: Optional[date] = None
+    wean_date: Optional[date] = None
     sow_id: Optional[int] = Field(default=None, foreign_key="pig.id")
     boar_id: Optional[int] = Field(default=None, foreign_key="pig.id")
+    service_date: Optional[date] = None
+    expected_farrow_date: Optional[date] = None
 
     piglets: List["Pig"] = Relationship(back_populates="litter")
 
