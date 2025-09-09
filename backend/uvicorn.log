@@ -1,0 +1,16 @@
+INFO:     Started server process [7233]
+INFO:     Waiting for application startup.
+{"level": "WARNING", "logger": "passlib.handlers.bcrypt", "message": "(trapped) error reading bcrypt version", "time": "2025-09-09T14:07:35+0000", "exc_info": "Traceback (most recent call last):\n  File \"/workspace/.venv/lib/python3.13/site-packages/passlib/handlers/bcrypt.py\", line 620, in _load_backend_mixin\n    version = _bcrypt.__about__.__version__\n              ^^^^^^^^^^^^^^^^^\nAttributeError: module 'bcrypt' has no attribute '__about__'"}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:47766 - "GET /api/healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35192 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49306 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49322 - "POST /api/v1/pigs/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49330 - "POST /api/v1/pigs/757c3d9b-0ead-47aa-bac7-9d189973de93/weights HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49344 - "POST /api/v1/breeding/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49346 - "POST /api/v1/litters/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49352 - "POST /api/v1/health/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49366 - "GET /api/v1/pigs/export HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49382 - "POST /api/v1/pigs/757c3d9b-0ead-47aa-bac7-9d189973de93/weights HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49396 - "GET /api/v1/reports/adg?pig_id=757c3d9b-0ead-47aa-bac7-9d189973de93 HTTP/1.1" 200 OK
